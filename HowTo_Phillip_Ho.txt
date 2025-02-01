@@ -1,1 +1,18 @@
 How to compile/execute/interpret from command line:
+
+First, make sure you have python installed.
+Download link found here: https://www.python.org/downloads/
+
+Ensure that you are in the same directory as the calculator.py file.
+
+First we need to install the required libraries.
+
+To do this, type "pip install PyQt5" in the command line.
+(Library for creating the GUI)
+
+After this, to run the program, simply type "python calculator.py" in the command line.
+
+
+
+
+
