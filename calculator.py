@@ -60,7 +60,6 @@ class Calculator(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.sumInMemory = 0.0
         
         self.display = QLineEdit('0')
         self.display.setReadOnly(True)
@@ -76,16 +75,10 @@ class Calculator(QWidget):
             self.digitButtons.append(self.createButton(str(i), self.digitClicked))
         
         self.pointButton = self.createButton(".", self.pointClicked)
-        self.changeSignButton = self.createButton("±", self.changeSignClicked)
         
         self.backspaceButton = self.createButton("Backspace", self.backspaceClicked)
         self.clearButton = self.createButton("Clear", self.clear)
         self.clearAllButton = self.createButton("Clear All", self.clearAll)
-        
-        self.clearMemoryButton = self.createButton("MC", self.clearMemory)
-        self.readMemoryButton = self.createButton("MR", self.readMemory)
-        self.setMemoryButton = self.createButton("MS", self.setMemory)
-        self.addToMemoryButton = self.createButton("M+", self.addToMemory)
         
         self.divisionButton = self.createButton("÷", self.operatorClicked)
         self.timesButton = self.createButton("×", self.operatorClicked)
@@ -108,11 +101,6 @@ class Calculator(QWidget):
         mainLayout.addWidget(self.clearButton, 1, 2, 1, 2)
         mainLayout.addWidget(self.clearAllButton, 1, 4, 1, 2)
         
-        mainLayout.addWidget(self.clearMemoryButton, 2, 0)
-        mainLayout.addWidget(self.readMemoryButton, 3, 0)
-        mainLayout.addWidget(self.setMemoryButton, 4, 0)
-        mainLayout.addWidget(self.addToMemoryButton, 5, 0)
-        
         for i in range(1, self.NumDigitButtons):
             row = ((9 - i) // 3) + 2
             column = ((i - 1) % 3) + 1
@@ -120,7 +108,6 @@ class Calculator(QWidget):
         
         mainLayout.addWidget(self.digitButtons[0], 5, 1)
         mainLayout.addWidget(self.pointButton, 5, 2)
-        mainLayout.addWidget(self.changeSignButton, 5, 3)
         
         mainLayout.addWidget(self.divisionButton, 2, 4)
         mainLayout.addWidget(self.timesButton, 3, 4)
@@ -164,13 +151,6 @@ class Calculator(QWidget):
         if '.' not in self.display.text().split()[-1]:
             self.display.setText(self.display.text() + '.')
 
-    def changeSignClicked(self):
-        current_text = self.display.text()
-        if current_text and (current_text[-1].isdigit() or current_text[-1] in ').'):
-            self.display.setText(current_text + '*-1')
-        else:
-            self.display.setText(current_text + '-')
-
     def backspaceClicked(self):
         current_text = self.display.text()
         self.display.setText(current_text[:-1] if len(current_text) > 0 else '0')
@@ -180,32 +160,12 @@ class Calculator(QWidget):
 
     def clearAll(self):
         self.display.setText('0')
-        self.sumInMemory = 0.0
-
-    def clearMemory(self):
-        self.sumInMemory = 0.0
-
-    def readMemory(self):
-        current_text = self.display.text()
-        self.display.setText(current_text + str(self.sumInMemory))
-
-    def setMemory(self):
-        try:
-            self.sumInMemory = float(self.display.text())
-        except:
-            self.sumInMemory = 0.0
-
-    def addToMemory(self):
-        try:
-            self.sumInMemory += float(self.display.text())
-        except:
-            pass
 
     def abortOperation(self):
         self.display.setText("####")
 
     def equalClicked(self):
-        expression = self.display.text().replace('{', '(').replace('}', ')')
+        expression = self.display.text().replace('×', '*').replace('÷', '/').replace('{', '(').replace('}', ')')
         try:
             tokens = self.tokenize(expression)
             rpn = self.parse_expression(tokens)
