@@ -79,7 +79,7 @@ class Calculator(QWidget):
         self.backspaceButton = self.createButton("Backspace", self.backspaceClicked)
         self.clearButton = self.createButton("Clear", self.clear)
         
-        self.divisionButton = self.createButton("÷", self.operatorClicked)
+        self.divisionButton = self.createButton("/", self.operatorClicked)
         self.timesButton = self.createButton("×", self.operatorClicked)
         self.minusButton = self.createButton("-", self.operatorClicked)
         self.plusButton = self.createButton("+", self.operatorClicked)
@@ -149,18 +149,27 @@ class Calculator(QWidget):
 
     def digitClicked(self):
         digit = self.sender().text()
-        if self.display.text() == '0':
+        current_text = self.display.text()
+        if current_text == '0' and digit != '0':  # Handle all digits including 0
             self.display.setText(digit)
         else:
-            self.display.setText(self.display.text() + digit)
+            self.display.setText(current_text + digit)
 
     def functionClicked(self):
         function = self.sender().text() + '('
-        self.display.setText(self.display.text() + function)
+        current_text = self.display.text()
+        if current_text == '0':
+            self.display.setText(function)
+        else:
+            self.display.setText(current_text + function)
 
     def operatorClicked(self):
         operator = self.sender().text()
-        self.display.setText(self.display.text() + operator)
+        current_text = self.display.text()
+        if current_text == '0':
+            self.display.setText(operator)
+        else:
+            self.display.setText(current_text + operator)
 
     def pointClicked(self):
         current_text = self.display.text()
@@ -320,7 +329,11 @@ class Calculator(QWidget):
     # Add new parenthesis handler
     def parenthesisClicked(self):
         paren = self.sender().text()
-        self.display.setText(self.display.text() + paren)
+        current_text = self.display.text()
+        if current_text == '0':
+            self.display.setText(paren)
+        else:
+            self.display.setText(current_text + paren)
 
     def negativeClicked(self):
         current_text = self.display.text()
