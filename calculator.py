@@ -64,10 +64,10 @@ class Calculator(QWidget):
         self.display = QLineEdit('0')
         self.display.setReadOnly(True)
         self.display.setAlignment(Qt.AlignRight)
-        self.display.setMaxLength(30)
+        self.display.setMaxLength(100)
         
         font = self.display.font()
-        font.setPointSize(font.pointSize() + 8)
+        font.setPointSize(font.pointSize() + 4)
         self.display.setFont(font)
         
         self.digitButtons = []
@@ -78,7 +78,6 @@ class Calculator(QWidget):
         
         self.backspaceButton = self.createButton("Backspace", self.backspaceClicked)
         self.clearButton = self.createButton("Clear", self.clear)
-        self.clearAllButton = self.createButton("Clear All", self.clearAll)
         
         self.divisionButton = self.createButton("÷", self.operatorClicked)
         self.timesButton = self.createButton("×", self.operatorClicked)
@@ -94,18 +93,27 @@ class Calculator(QWidget):
         self.powerButton = self.createButton("^", self.operatorClicked)
         self.equalButton = self.createButton("=", self.equalClicked)
         
+        # Add new bracket buttons
+        self.openParenButton = self.createButton("(", self.parenthesisClicked)
+        self.closeParenButton = self.createButton(")", self.parenthesisClicked)
+        self.openCurlyButton = self.createButton("{", self.parenthesisClicked)
+        self.closeCurlyButton = self.createButton("}", self.parenthesisClicked)
+        
+        # Add negative sign button
+        self.negativeButton = self.createButton("(-)", self.negativeClicked)
+        
         mainLayout = QGridLayout()
         mainLayout.setSizeConstraint(QLayout.SetFixedSize)
         mainLayout.addWidget(self.display, 0, 0, 1, 7)
         mainLayout.addWidget(self.backspaceButton, 1, 0, 1, 2)
         mainLayout.addWidget(self.clearButton, 1, 2, 1, 2)
-        mainLayout.addWidget(self.clearAllButton, 1, 4, 1, 2)
         
         for i in range(1, self.NumDigitButtons):
             row = ((9 - i) // 3) + 2
             column = ((i - 1) % 3) + 1
             mainLayout.addWidget(self.digitButtons[i], row, column)
         
+        mainLayout.addWidget(self.negativeButton, 5, 0)
         mainLayout.addWidget(self.digitButtons[0], 5, 1)
         mainLayout.addWidget(self.pointButton, 5, 2)
         
@@ -124,8 +132,15 @@ class Calculator(QWidget):
         mainLayout.addWidget(self.powerButton, 4, 6)
         mainLayout.addWidget(self.equalButton, 5, 6)
         
+        # Add bracket buttons to row 6
+        mainLayout.addWidget(self.openParenButton, 6, 0)
+        mainLayout.addWidget(self.closeParenButton, 6, 1)
+        mainLayout.addWidget(self.openCurlyButton, 6, 2)
+        mainLayout.addWidget(self.closeCurlyButton, 6, 3)
+        
         self.setLayout(mainLayout)
         self.setWindowTitle("Calculator")
+        self.setFocusPolicy(Qt.StrongFocus)  # Enable keyboard focus
 
     def createButton(self, text, member):
         button = Button(text)
@@ -148,32 +163,49 @@ class Calculator(QWidget):
         self.display.setText(self.display.text() + operator)
 
     def pointClicked(self):
-        if '.' not in self.display.text().split()[-1]:
-            self.display.setText(self.display.text() + '.')
+        current_text = self.display.text()
+        # Find the start of the current number being entered
+        i = len(current_text) - 1
+        while i >= 0 and (current_text[i].isdigit() or current_text[i] == '.'):
+            i -= 1
+        current_number = current_text[i+1:]
+        if '.' not in current_number:
+            self.display.setText(current_text + '.')
 
     def backspaceClicked(self):
         current_text = self.display.text()
         self.display.setText(current_text[:-1] if len(current_text) > 0 else '0')
 
     def clear(self):
+        """Hard clear that resets completely"""
         self.display.setText('0')
-
-    def clearAll(self):
-        self.display.setText('0')
+        # Add any additional reset logic here if needed later
 
     def abortOperation(self):
         self.display.setText("####")
 
     def equalClicked(self):
-        expression = self.display.text().replace('×', '*').replace('÷', '/').replace('{', '(').replace('}', ')')
+        expression = (self.display.text()
+                      .replace('{', '(')
+                      .replace('}', ')')
+                      .replace('÷', '/')
+                      .replace('×', '*'))
         try:
+            print("Raw expression:", expression)  # Debug line 1
             tokens = self.tokenize(expression)
+            print("Tokens:", tokens)  # Debug line 2
             rpn = self.parse_expression(tokens)
+            print("RPN:", rpn)  # Debug line 3
             result = self.evaluate_rpn(rpn)
+            print("Result:", result)  # Debug line 4
             self.display.setText(f"{result:.6f}".rstrip('0').rstrip('.') if '.' in f"{result}" else str(int(result)))
-        except:
+        except Exception as e:
+            print(f"Error: {repr(e)} at:")  # More detailed error reporting
+            import traceback
+            traceback.print_exc()
             self.abortOperation()
 
+    #unary minus handling
     @staticmethod
     def tokenize(expression):
         tokens = []
@@ -235,9 +267,13 @@ class Calculator(QWidget):
             else:
                 raise ValueError("Unknown token")
         while stack:
-            output.append(stack.pop())
+            token = stack.pop()
+            if token == '(':
+                raise ValueError("Mismatched parentheses")
+            output.append(token)
         return output
 
+    #function evaluation in RPN processor
     @staticmethod
     def evaluate_rpn(rpn):
         stack = []
@@ -259,7 +295,7 @@ class Calculator(QWidget):
                     stack.append(a / b)
                 elif token == '^':
                     stack.append(a ** b)
-            elif token in {'sin', 'cos', 'tan', 'cot', 'ln', 'log10'}:
+            elif token in {'sin', 'cos', 'tan', 'cot'}:
                 a = stack.pop()
                 if token == 'sin':
                     stack.append(math.sin(a))
@@ -269,13 +305,32 @@ class Calculator(QWidget):
                     stack.append(math.tan(a))
                 elif token == 'cot':
                     stack.append(1 / math.tan(a))
-                elif token == 'ln':
+            elif token in {'ln', 'log10'}:
+                a = stack.pop()
+                if a <= 0:
+                    raise ValueError("Log of non-positive number")
+                if token == 'ln':
                     stack.append(math.log(a))
                 elif token == 'log10':
                     stack.append(math.log10(a))
             else:
                 raise ValueError("Unknown operator")
         return stack[0]
+
+    # Add new parenthesis handler
+    def parenthesisClicked(self):
+        paren = self.sender().text()
+        self.display.setText(self.display.text() + paren)
+
+    def negativeClicked(self):
+        current_text = self.display.text()
+        if current_text == '0':
+            self.display.setText('-')
+        else:
+            # Insert negative sign at valid positions
+            last_char = current_text[-1] if current_text else ''
+            if last_char in ('+', '-', '×', '÷', '('):
+                self.display.setText(current_text + '-')
 
 if __name__ == '__main__':
     import sys
