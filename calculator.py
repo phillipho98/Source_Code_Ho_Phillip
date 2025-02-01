@@ -31,10 +31,17 @@
 
 #3. Usage of a version control system and proper description. (1p.) 
 
+################################################################################################################
+
+
+
+
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QLineEdit, QToolButton,
                              QWidget, QSizePolicy, QLayout)
 from PyQt5.QtGui import QFont
+import math
 
 class Button(QToolButton):
     def __init__(self, text, parent=None):
@@ -54,16 +61,11 @@ class Calculator(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.sumInMemory = 0.0
-        self.sumSoFar = 0.0
-        self.factorSoFar = 0.0
-        self.waitingForOperand = True
-        self.pendingAdditiveOperator = ""
-        self.pendingMultiplicativeOperator = ""
         
         self.display = QLineEdit('0')
         self.display.setReadOnly(True)
         self.display.setAlignment(Qt.AlignRight)
-        self.display.setMaxLength(15)
+        self.display.setMaxLength(30)
         
         font = self.display.font()
         font.setPointSize(font.pointSize() + 8)
@@ -85,19 +87,23 @@ class Calculator(QWidget):
         self.setMemoryButton = self.createButton("MS", self.setMemory)
         self.addToMemoryButton = self.createButton("M+", self.addToMemory)
         
-        self.divisionButton = self.createButton("÷", self.multiplicativeOperatorClicked)
-        self.timesButton = self.createButton("×", self.multiplicativeOperatorClicked)
-        self.minusButton = self.createButton("-", self.additiveOperatorClicked)
-        self.plusButton = self.createButton("+", self.additiveOperatorClicked)
+        self.divisionButton = self.createButton("÷", self.operatorClicked)
+        self.timesButton = self.createButton("×", self.operatorClicked)
+        self.minusButton = self.createButton("-", self.operatorClicked)
+        self.plusButton = self.createButton("+", self.operatorClicked)
         
-        self.squareRootButton = self.createButton("Sqrt", self.unaryOperatorClicked)
-        self.powerButton = self.createButton("x²", self.unaryOperatorClicked)
-        self.reciprocalButton = self.createButton("1/x", self.unaryOperatorClicked)
+        self.sinButton = self.createButton("sin", self.functionClicked)
+        self.cosButton = self.createButton("cos", self.functionClicked)
+        self.tanButton = self.createButton("tan", self.functionClicked)
+        self.cotButton = self.createButton("cot", self.functionClicked)
+        self.lnButton = self.createButton("ln", self.functionClicked)
+        self.log10Button = self.createButton("log10", self.functionClicked)
+        self.powerButton = self.createButton("^", self.operatorClicked)
         self.equalButton = self.createButton("=", self.equalClicked)
         
         mainLayout = QGridLayout()
         mainLayout.setSizeConstraint(QLayout.SetFixedSize)
-        mainLayout.addWidget(self.display, 0, 0, 1, 6)
+        mainLayout.addWidget(self.display, 0, 0, 1, 7)
         mainLayout.addWidget(self.backspaceButton, 1, 0, 1, 2)
         mainLayout.addWidget(self.clearButton, 1, 2, 1, 2)
         mainLayout.addWidget(self.clearAllButton, 1, 4, 1, 2)
@@ -121,10 +127,15 @@ class Calculator(QWidget):
         mainLayout.addWidget(self.minusButton, 4, 4)
         mainLayout.addWidget(self.plusButton, 5, 4)
         
-        mainLayout.addWidget(self.squareRootButton, 2, 5)
-        mainLayout.addWidget(self.powerButton, 3, 5)
-        mainLayout.addWidget(self.reciprocalButton, 4, 5)
-        mainLayout.addWidget(self.equalButton, 5, 5)
+        mainLayout.addWidget(self.sinButton, 2, 5)
+        mainLayout.addWidget(self.cosButton, 3, 5)
+        mainLayout.addWidget(self.tanButton, 4, 5)
+        mainLayout.addWidget(self.cotButton, 5, 5)
+        
+        mainLayout.addWidget(self.lnButton, 2, 6)
+        mainLayout.addWidget(self.log10Button, 3, 6)
+        mainLayout.addWidget(self.powerButton, 4, 6)
+        mainLayout.addWidget(self.equalButton, 5, 6)
         
         self.setLayout(mainLayout)
         self.setWindowTitle("Calculator")
@@ -135,178 +146,176 @@ class Calculator(QWidget):
         return button
 
     def digitClicked(self):
-        clickedButton = self.sender()
-        digitValue = int(clickedButton.text())
-        
-        if self.display.text() == '0' and digitValue == 0:
-            return
-        
-        if self.waitingForOperand:
-            self.display.clear()
-            self.waitingForOperand = False
-            
-        self.display.setText(self.display.text() + str(digitValue))
-
-    def unaryOperatorClicked(self):
-        clickedButton = self.sender()
-        clickedOperator = clickedButton.text()
-        operand = float(self.display.text())
-        result = 0.0
-        
-        if clickedOperator == "Sqrt":
-            if operand < 0.0:
-                self.abortOperation()
-                return
-            result = (operand) ** 0.5
-        elif clickedOperator == "x²":
-            result = operand ** 2
-        elif clickedOperator == "1/x":
-            if operand == 0.0:
-                self.abortOperation()
-                return
-            result = 1.0 / operand
-            
-        self.display.setText(str(result))
-        self.waitingForOperand = True
-
-    def additiveOperatorClicked(self):
-        clickedButton = self.sender()
-        clickedOperator = clickedButton.text()
-        operand = float(self.display.text())
-        
-        if self.pendingMultiplicativeOperator:
-            if not self.calculate(operand, self.pendingMultiplicativeOperator):
-                self.abortOperation()
-                return
-            self.display.setText(str(self.factorSoFar))
-            operand = self.factorSoFar
-            self.factorSoFar = 0.0
-            self.pendingMultiplicativeOperator = ""
-        
-        if self.pendingAdditiveOperator:
-            if not self.calculate(operand, self.pendingAdditiveOperator):
-                self.abortOperation()
-                return
-            self.display.setText(str(self.sumSoFar))
+        digit = self.sender().text()
+        if self.display.text() == '0':
+            self.display.setText(digit)
         else:
-            self.sumSoFar = operand
-            
-        self.pendingAdditiveOperator = clickedOperator
-        self.waitingForOperand = True
+            self.display.setText(self.display.text() + digit)
 
-    def multiplicativeOperatorClicked(self):
-        clickedButton = self.sender()
-        clickedOperator = clickedButton.text()
-        operand = float(self.display.text())
-        
-        if self.pendingMultiplicativeOperator:
-            if not self.calculate(operand, self.pendingMultiplicativeOperator):
-                self.abortOperation()
-                return
-            self.display.setText(str(self.factorSoFar))
-        else:
-            self.factorSoFar = operand
-            
-        self.pendingMultiplicativeOperator = clickedOperator
-        self.waitingForOperand = True
+    def functionClicked(self):
+        function = self.sender().text() + '('
+        self.display.setText(self.display.text() + function)
 
-    def equalClicked(self):
-        operand = float(self.display.text())
-        
-        if self.pendingMultiplicativeOperator:
-            if not self.calculate(operand, self.pendingMultiplicativeOperator):
-                self.abortOperation()
-                return
-            operand = self.factorSoFar
-            self.factorSoFar = 0.0
-            self.pendingMultiplicativeOperator = ""
-            
-        if self.pendingAdditiveOperator:
-            if not self.calculate(operand, self.pendingAdditiveOperator):
-                self.abortOperation()
-                return
-            self.pendingAdditiveOperator = ""
-        else:
-            self.sumSoFar = operand
-            
-        self.display.setText(str(self.sumSoFar))
-        self.sumSoFar = 0.0
-        self.waitingForOperand = True
+    def operatorClicked(self):
+        operator = self.sender().text()
+        self.display.setText(self.display.text() + operator)
 
     def pointClicked(self):
-        if self.waitingForOperand:
-            self.display.setText('0')
-        if '.' not in self.display.text():
+        if '.' not in self.display.text().split()[-1]:
             self.display.setText(self.display.text() + '.')
-        self.waitingForOperand = False
 
     def changeSignClicked(self):
-        text = self.display.text()
-        value = float(text)
-        
-        if value > 0:
-            text = '-' + text
-        elif value < 0:
-            text = text[1:]
-            
-        self.display.setText(text)
+        current_text = self.display.text()
+        if current_text and (current_text[-1].isdigit() or current_text[-1] in ').'):
+            self.display.setText(current_text + '*-1')
+        else:
+            self.display.setText(current_text + '-')
 
     def backspaceClicked(self):
-        if self.waitingForOperand:
-            return
-            
-        text = self.display.text()[:-1]
-        if not text:
-            text = '0'
-            self.waitingForOperand = True
-        self.display.setText(text)
+        current_text = self.display.text()
+        self.display.setText(current_text[:-1] if len(current_text) > 0 else '0')
 
     def clear(self):
-        if self.waitingForOperand:
-            return
-            
         self.display.setText('0')
-        self.waitingForOperand = True
 
     def clearAll(self):
-        self.sumSoFar = 0.0
-        self.factorSoFar = 0.0
-        self.pendingAdditiveOperator = ""
-        self.pendingMultiplicativeOperator = ""
         self.display.setText('0')
-        self.waitingForOperand = True
+        self.sumInMemory = 0.0
 
     def clearMemory(self):
         self.sumInMemory = 0.0
 
     def readMemory(self):
-        self.display.setText(str(self.sumInMemory))
-        self.waitingForOperand = True
+        current_text = self.display.text()
+        self.display.setText(current_text + str(self.sumInMemory))
 
     def setMemory(self):
-        self.equalClicked()
-        self.sumInMemory = float(self.display.text())
+        try:
+            self.sumInMemory = float(self.display.text())
+        except:
+            self.sumInMemory = 0.0
 
     def addToMemory(self):
-        self.equalClicked()
-        self.sumInMemory += float(self.display.text())
+        try:
+            self.sumInMemory += float(self.display.text())
+        except:
+            pass
 
     def abortOperation(self):
-        self.clearAll()
         self.display.setText("####")
 
-    def calculate(self, rightOperand, pendingOperator):
-        if pendingOperator == "+":
-            self.sumSoFar += rightOperand
-        elif pendingOperator == "-":
-            self.sumSoFar -= rightOperand
-        elif pendingOperator == "×":
-            self.factorSoFar *= rightOperand
-        elif pendingOperator == "÷":
-            if rightOperand == 0.0:
-                return False
-            self.factorSoFar /= rightOperand
-        return True
+    def equalClicked(self):
+        expression = self.display.text().replace('{', '(').replace('}', ')')
+        try:
+            tokens = self.tokenize(expression)
+            rpn = self.parse_expression(tokens)
+            result = self.evaluate_rpn(rpn)
+            self.display.setText(f"{result:.6f}".rstrip('0').rstrip('.') if '.' in f"{result}" else str(int(result)))
+        except:
+            self.abortOperation()
+
+    @staticmethod
+    def tokenize(expression):
+        tokens = []
+        i = 0
+        n = len(expression)
+        while i < n:
+            char = expression[i]
+            if char.isspace():
+                i += 1
+                continue
+            if char.isdigit() or char == '.':
+                j = i
+                while j < n and (expression[j].isdigit() or expression[j] == '.'):
+                    j += 1
+                num = expression[i:j]
+                tokens.append(num)
+                i = j
+            elif char.isalpha():
+                j = i
+                while j < n and expression[j].isalpha():
+                    j += 1
+                func = expression[i:j]
+                tokens.append(func)
+                i = j
+            elif char in '+-*/^':
+                if char == '-' and (i == 0 or tokens[-1] in '+-*/^(' or (tokens and tokens[-1] in ['(', 'sin', 'cos', 'tan', 'cot', 'ln', 'log10'])):
+                    tokens.append('u-')
+                else:
+                    tokens.append(char)
+                i += 1
+            elif char in '()':
+                tokens.append(char)
+                i += 1
+            else:
+                raise ValueError("Invalid character")
+        return tokens
+
+    @staticmethod
+    def parse_expression(tokens):
+        output = []
+        stack = []
+        precedence = {'u-': 7, '^': 6, '*': 5, '/': 5, '+': 4, '-': 4,
+                      'sin': 8, 'cos': 8, 'tan': 8, 'cot': 8, 'ln': 8, 'log10': 8}
+        for token in tokens:
+            if token.replace('.', '', 1).isdigit() or (token.startswith('-') and token[1:].replace('.', '', 1).isdigit()):
+                output.append(float(token))
+            elif token in precedence:
+                while stack and stack[-1] != '(' and precedence.get(token, 0) <= precedence.get(stack[-1], 0):
+                    output.append(stack.pop())
+                stack.append(token)
+            elif token == '(':
+                stack.append(token)
+            elif token == ')':
+                while stack[-1] != '(':
+                    output.append(stack.pop())
+                stack.pop()
+                if stack and stack[-1] in precedence:
+                    output.append(stack.pop())
+            else:
+                raise ValueError("Unknown token")
+        while stack:
+            output.append(stack.pop())
+        return output
+
+    @staticmethod
+    def evaluate_rpn(rpn):
+        stack = []
+        for token in rpn:
+            if isinstance(token, float):
+                stack.append(token)
+            elif token == 'u-':
+                stack.append(-stack.pop())
+            elif token in {'+', '-', '*', '/', '^'}:
+                b = stack.pop()
+                a = stack.pop() if token != '^' else stack.pop()
+                if token == '+':
+                    stack.append(a + b)
+                elif token == '-':
+                    stack.append(a - b)
+                elif token == '*':
+                    stack.append(a * b)
+                elif token == '/':
+                    stack.append(a / b)
+                elif token == '^':
+                    stack.append(a ** b)
+            elif token in {'sin', 'cos', 'tan', 'cot', 'ln', 'log10'}:
+                a = stack.pop()
+                if token == 'sin':
+                    stack.append(math.sin(a))
+                elif token == 'cos':
+                    stack.append(math.cos(a))
+                elif token == 'tan':
+                    stack.append(math.tan(a))
+                elif token == 'cot':
+                    stack.append(1 / math.tan(a))
+                elif token == 'ln':
+                    stack.append(math.log(a))
+                elif token == 'log10':
+                    stack.append(math.log10(a))
+            else:
+                raise ValueError("Unknown operator")
+        return stack[0]
 
 if __name__ == '__main__':
     import sys
