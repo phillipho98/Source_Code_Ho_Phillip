@@ -172,7 +172,7 @@ class Calculator(QWidget):
     def digitClicked(self):
         digit = self.sender().text()
         current_text = self.display.text()
-        if current_text == '0' and digit != '0':  # Handle all digits including 0
+        if current_text == '0' and digit != '0': 
             self.display.setText(digit)
         else:
             self.display.setText(current_text + digit)
@@ -195,7 +195,6 @@ class Calculator(QWidget):
 
     def pointClicked(self):
         current_text = self.display.text()
-        # Find the start of the current number being entered
         i = len(current_text) - 1
         while i >= 0 and (current_text[i].isdigit() or current_text[i] == '.'):
             i -= 1
@@ -220,15 +219,12 @@ class Calculator(QWidget):
         if current_text == '0':
             self.display.setText('-')
         else:
-            # Insert negative sign at valid positions
             last_char = current_text[-1] if current_text else ''
             if last_char in ('+', '-', '×', '÷', '('):
                 self.display.setText(current_text + '-')
 
     def clear(self):
-        """Hard clear that resets completely"""
         self.display.setText('0')
-        # Add any additional reset logic here if needed later
 
     def abortOperation(self):
         self.display.setText("####")
