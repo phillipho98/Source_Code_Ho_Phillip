@@ -36,54 +36,71 @@
 
 
 
-
+#imports for Qt python library that is used to create the calculator GUI
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QGridLayout, QLineEdit, QToolButton,
                              QWidget, QSizePolicy, QLayout)
+
 from PyQt5.QtGui import QFont
+#imports for math library that is used to evaluate the mathematical expressions
 import math
 
 class Button(QToolButton):
     def __init__(self, text, parent=None):
         super().__init__(parent)
+        #set size policy to make buttons expand horizontally but maintain vertical size at same time
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        #sets the displayed text on the button
         self.setText(text)
     
+    #used to set the size of the button
     def sizeHint(self):
         size = super().sizeHint()
+        #for better visibility
         size.setHeight(size.height() + 20)
+        #square-ish aspect ratio)
         size.setWidth(max(size.width(), size.height()))
         return size
 
 class Calculator(QWidget):
     NumDigitButtons = 10
     
+    #initialization of the calculator GUI
     def __init__(self, parent=None):
         super().__init__(parent)
         
+        #display is the text box that shows the current input and result (i.e the calculator window)
         self.display = QLineEdit('0')
         self.display.setReadOnly(True)
         self.display.setAlignment(Qt.AlignRight)
         self.display.setMaxLength(100)
         
+        #display font settings
         font = self.display.font()
         font.setPointSize(font.pointSize() + 4)
         self.display.setFont(font)
         
+        #creates digit buttons 0-9 based off of NumDigitButtons being 10
         self.digitButtons = []
         for i in range(self.NumDigitButtons):
             self.digitButtons.append(self.createButton(str(i), self.digitClicked))
         
+        #decimal point button
         self.pointButton = self.createButton(".", self.pointClicked)
         
+        #backspace button
         self.backspaceButton = self.createButton("Backspace", self.backspaceClicked)
+
+        #clear button
         self.clearButton = self.createButton("Clear", self.clear)
         
+        #operator buttons
         self.divisionButton = self.createButton("/", self.operatorClicked)
         self.timesButton = self.createButton("×", self.operatorClicked)
         self.minusButton = self.createButton("-", self.operatorClicked)
         self.plusButton = self.createButton("+", self.operatorClicked)
         
+
         self.sinButton = self.createButton("sin", self.functionClicked)
         self.cosButton = self.createButton("cos", self.functionClicked)
         self.tanButton = self.createButton("tan", self.functionClicked)
@@ -93,18 +110,22 @@ class Calculator(QWidget):
         self.powerButton = self.createButton("^", self.operatorClicked)
         self.equalButton = self.createButton("=", self.equalClicked)
         
-        # Add new bracket buttons
+        #parentheses/bracket buttons
         self.openParenButton = self.createButton("(", self.parenthesisClicked)
         self.closeParenButton = self.createButton(")", self.parenthesisClicked)
         self.openCurlyButton = self.createButton("{", self.parenthesisClicked)
         self.closeCurlyButton = self.createButton("}", self.parenthesisClicked)
         
-        # Add negative sign button
+        #negative sign button
         self.negativeButton = self.createButton("(-)", self.negativeClicked)
         
+        #main layout of the calculator GUI
         mainLayout = QGridLayout()
         mainLayout.setSizeConstraint(QLayout.SetFixedSize)
+
+        #adds all buttons to the main layout
         mainLayout.addWidget(self.display, 0, 0, 1, 7)
+
         mainLayout.addWidget(self.backspaceButton, 1, 0, 1, 2)
         mainLayout.addWidget(self.clearButton, 1, 2, 1, 2)
         
@@ -132,7 +153,6 @@ class Calculator(QWidget):
         mainLayout.addWidget(self.powerButton, 4, 6)
         mainLayout.addWidget(self.equalButton, 5, 6)
         
-        # Add bracket buttons to row 6
         mainLayout.addWidget(self.openParenButton, 6, 0)
         mainLayout.addWidget(self.closeParenButton, 6, 1)
         mainLayout.addWidget(self.openCurlyButton, 6, 2)
@@ -140,12 +160,14 @@ class Calculator(QWidget):
         
         self.setLayout(mainLayout)
         self.setWindowTitle("Calculator")
-        self.setFocusPolicy(Qt.StrongFocus)  # Enable keyboard focus
 
     def createButton(self, text, member):
         button = Button(text)
         button.clicked.connect(member)
         return button
+
+
+    #######################################ALL FUNCTIONS THAT ARE CALLED WHEN A BUTTON IS PRESSED#################
 
     def digitClicked(self):
         digit = self.sender().text()
@@ -185,6 +207,24 @@ class Calculator(QWidget):
         current_text = self.display.text()
         self.display.setText(current_text[:-1] if len(current_text) > 0 else '0')
 
+    def parenthesisClicked(self):
+        paren = self.sender().text()
+        current_text = self.display.text()
+        if current_text == '0':
+            self.display.setText(paren)
+        else:
+            self.display.setText(current_text + paren)
+
+    def negativeClicked(self):
+        current_text = self.display.text()
+        if current_text == '0':
+            self.display.setText('-')
+        else:
+            # Insert negative sign at valid positions
+            last_char = current_text[-1] if current_text else ''
+            if last_char in ('+', '-', '×', '÷', '('):
+                self.display.setText(current_text + '-')
+
     def clear(self):
         """Hard clear that resets completely"""
         self.display.setText('0')
@@ -199,17 +239,19 @@ class Calculator(QWidget):
                       .replace('}', ')')
                       .replace('÷', '/')
                       .replace('×', '*'))
+        
+        ##################################DEBUGGING IN TERMINAL####################################################
         try:
-            print("Raw expression:", expression)  # Debug line 1
+            print("Raw expression:", expression)  
             tokens = self.tokenize(expression)
-            print("Tokens:", tokens)  # Debug line 2
+            print("Tokens:", tokens)  
             rpn = self.parse_expression(tokens)
-            print("RPN:", rpn)  # Debug line 3
+            print("RPN:", rpn)  
             result = self.evaluate_rpn(rpn)
-            print("Result:", result)  # Debug line 4
+            print("Result:", result) 
             self.display.setText(f"{result:.6f}".rstrip('0').rstrip('.') if '.' in f"{result}" else str(int(result)))
         except Exception as e:
-            print(f"Error: {repr(e)} at:")  # More detailed error reporting
+            print(f"Error: {repr(e)} at:")  
             import traceback
             traceback.print_exc()
             self.abortOperation()
@@ -286,14 +328,23 @@ class Calculator(QWidget):
     @staticmethod
     def evaluate_rpn(rpn):
         stack = []
+        #processes each token in the RPN expression
         for token in rpn:
+            #numbers are directly pushed to the stack
             if isinstance(token, float):
                 stack.append(token)
+            
+            #handles unary negation (e.g., -3)
             elif token == 'u-':
                 stack.append(-stack.pop())
+            
+            #binary arithmetic operations
             elif token in {'+', '-', '*', '/', '^'}:
+                #pop operands in reverse order (RPN is operand1 operand2 operator)
                 b = stack.pop()
-                a = stack.pop() if token != '^' else stack.pop()
+                a = stack.pop() if token != '^' else stack.pop()  #handling for exponent order
+                
+                #performs the operation and pushes result
                 if token == '+':
                     stack.append(a + b)
                 elif token == '-':
@@ -303,7 +354,9 @@ class Calculator(QWidget):
                 elif token == '/':
                     stack.append(a / b)
                 elif token == '^':
-                    stack.append(a ** b)
+                    stack.append(a ** b)  #handles exponents: a^b
+                    
+            #trigonometric functions (require single operand)
             elif token in {'sin', 'cos', 'tan', 'cot'}:
                 a = stack.pop()
                 if token == 'sin':
@@ -314,36 +367,26 @@ class Calculator(QWidget):
                     stack.append(math.tan(a))
                 elif token == 'cot':
                     stack.append(1 / math.tan(a))
+                    
+            #logarithmic functions
             elif token in {'ln', 'log10'}:
                 a = stack.pop()
                 if a <= 0:
                     raise ValueError("Log of non-positive number")
                 if token == 'ln':
-                    stack.append(math.log(a))
+                    stack.append(math.log(a))  #natural logarithm
                 elif token == 'log10':
-                    stack.append(math.log10(a))
+                    stack.append(math.log10(a))  #base-10 logarithm
+                    
+            #error handling for unknown operators
             else:
                 raise ValueError("Unknown operator")
+        
+        #final result should be the only element left in stack
+        if len(stack) != 1:
+            raise ValueError("Invalid expression format")
+            
         return stack[0]
-
-    # Add new parenthesis handler
-    def parenthesisClicked(self):
-        paren = self.sender().text()
-        current_text = self.display.text()
-        if current_text == '0':
-            self.display.setText(paren)
-        else:
-            self.display.setText(current_text + paren)
-
-    def negativeClicked(self):
-        current_text = self.display.text()
-        if current_text == '0':
-            self.display.setText('-')
-        else:
-            # Insert negative sign at valid positions
-            last_char = current_text[-1] if current_text else ''
-            if last_char in ('+', '-', '×', '÷', '('):
-                self.display.setText(current_text + '-')
 
 if __name__ == '__main__':
     import sys
